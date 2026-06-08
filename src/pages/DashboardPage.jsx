@@ -5,6 +5,7 @@ import GoalRing from '../components/GoalRing'
 import CalendarView from '../components/CalendarView'
 import EntryCard from '../components/EntryCard'
 import QuickAddModal from '../components/QuickAddModal'
+import DayDetailModal from '../components/DayDetailModal'
 import { format } from 'date-fns'
 import { Plus } from 'lucide-react'
 
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const [partnerProfile, setPartnerProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
+  const [selectedDay, setSelectedDay] = useState(null)
 
   const userId = session?.user?.id
   const goal = profile?.daily_goal_mg ?? 2
@@ -116,7 +118,7 @@ export default function DashboardPage() {
           {loading ? (
             <p style={{ color: 'var(--muted)' }}>Loading…</p>
           ) : (
-            <CalendarView totals={totals} goal={goal} />
+            <CalendarView totals={totals} goal={goal} onDayClick={setSelectedDay} />
           )}
         </div>
 
@@ -139,6 +141,19 @@ export default function DashboardPage() {
         <QuickAddModal
           onAdded={handleAdded}
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {selectedDay && (
+        <DayDetailModal
+          date={selectedDay}
+          userId={userId}
+          onClose={() => setSelectedDay(null)}
+          onDeleted={(id, date) => {
+            // If deleted from today, update today's list too
+            const today = format(new Date(), 'yyyy-MM-dd')
+            if (date === today) removeEntry(id)
+          }}
         />
       )}
     </>

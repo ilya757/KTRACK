@@ -14,7 +14,7 @@ function getDayColor(total, goal) {
 
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
-export default function CalendarView({ totals = [], goal = 2 }) {
+export default function CalendarView({ totals = [], goal = 2, onDayClick }) {
   const now = new Date()
   const monthStart = startOfMonth(now)
   const monthEnd = endOfMonth(now)
@@ -52,6 +52,7 @@ export default function CalendarView({ totals = [], goal = 2 }) {
           return (
             <div
               key={key}
+              onClick={() => !future && onDayClick && onDayClick(key)}
               style={{
                 background: future ? 'transparent' : bg,
                 borderRadius: 8,
@@ -64,6 +65,7 @@ export default function CalendarView({ totals = [], goal = 2 }) {
                 justifyContent: 'center',
                 gap: 1,
                 opacity: future ? 0.3 : 1,
+                cursor: future ? 'default' : 'pointer',
                 ...todayStyle,
               }}
             >
