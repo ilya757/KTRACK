@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getTodayEntries, getDailyTotals } from '../lib/queries'
+import { getTodayEntries, getDailyTotals, getProfile } from '../lib/queries'
 import GoalRing from '../components/GoalRing'
-import TrendChart from '../components/TrendChart'
+import CalendarView from '../components/CalendarView'
 import EntryCard from '../components/EntryCard'
 import QuickAddModal from '../components/QuickAddModal'
 import { format } from 'date-fns'
@@ -12,23 +12,35 @@ export default function DashboardPage() {
   const { session, profile } = useAuth()
   const [todayEntries, setTodayEntries] = useState([])
   const [totals, setTotals] = useState([])
+  const [partnerToday, setPartnerToday] = useState(null)
+  const [partnerProfile, setPartnerProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
 
   const userId = session?.user?.id
-  const goal = profile?.daily_goal_mg ?? 2000
+  const goal = profile?.daily_goal_mg ?? 2
+  const partnerId = profile?.partner_id
   const todayTotal = todayEntries.reduce((s, e) => s + e.amount_mg, 0)
 
   useEffect(() => {
     if (!userId) return
-    Promise.all([
+    const fetches = [
       getTodayEntries(userId),
-      getDailyTotals(userId, 30),
-    ]).then(([entries, tots]) => {
+      getDailyTotals(userId, 31),
+    ]
+    if (partnerId) {
+      fetches.push(getTodayEntries(partnerId))
+      fetches.push(getProfile(partnerId))
+    }
+    Promise.all(fetches).then(([entries, tots, partnerEntries, pProfile]) => {
       setTodayEntries(entries)
       setTotals(tots)
+      if (partnerEntries) {
+        setPartnerToday(partnerEntries.reduce((s, e) => s + e.amount_mg, 0))
+      }
+      if (pProfile) setPartnerProfile(pProfile)
     }).finally(() => setLoading(false))
-  }, [userId])
+  }, [userId, partnerId])
 
   function handleAdded(entry) {
     setTodayEntries(prev => [entry, ...prev])
@@ -38,20 +50,13 @@ export default function DashboardPage() {
     setTodayEntries(prev => prev.filter(e => e.id !== id))
   }
 
-  const streak = computeStreak(totals, goal)
-
   return (
     <>
       <div className="page">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <div>
-            <h1>Hi, {profile?.display_name ?? 'there'} 👋</h1>
-            <p style={{ color: 'var(--muted)', fontSize: '.85rem' }}>{format(new Date(), 'EEEE, MMMM d')}</p>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent)' }}>{streak}</div>
-            <div style={{ fontSize: '.7rem', color: 'var(--muted)' }}>day streak</div>
+            <h1>{format(new Date(), 'EEEE, MMMM d')}</h1>
           </div>
         </div>
 
@@ -71,7 +76,7 @@ export default function DashboardPage() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: '.6rem',
-            marginBottom: '1.25rem',
+            marginBottom: '1rem',
             boxShadow: '0 4px 24px rgba(99,102,241,.4)',
           }}
         >
@@ -79,25 +84,40 @@ export default function DashboardPage() {
           Add Entry
         </button>
 
-        {/* Today summary */}
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem' }}>
-          <GoalRing value={todayTotal} goal={goal} />
-          <div>
-            <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>Today's total</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{todayTotal.toFixed(1)}</div>
-            <div style={{ fontSize: '.8rem', color: 'var(--muted)' }}>g of {goal} g goal</div>
-            <div style={{ marginTop: '.5rem', fontSize: '.82rem', color: todayTotal < goal ? 'var(--success)' : 'var(--danger)' }}>
-              {todayTotal < goal
-                ? `${(goal - todayTotal).toFixed(1)} g remaining`
-                : `${(todayTotal - goal).toFixed(1)} g over goal`}
-            </div>
+        {/* Today's totals for both users */}
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <div style={{ fontSize: '.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '.75rem', fontWeight: 600 }}>
+            Today's Totals
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <UserTotal
+              name={profile?.display_name ?? 'You'}
+              total={todayTotal}
+              goal={goal}
+              isMe
+            />
+            {partnerId ? (
+              <UserTotal
+                name={partnerProfile?.display_name ?? 'Partner'}
+                total={partnerToday ?? null}
+                goal={partnerProfile?.daily_goal_mg ?? goal}
+              />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '.8rem', textAlign: 'center' }}>
+                Link partner in Settings
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 30-day trend */}
+        {/* Calendar */}
         <div className="card" style={{ marginBottom: '1rem' }}>
-          <h2 style={{ marginBottom: '.75rem' }}>30-Day Trend</h2>
-          <TrendChart totals={totals} goal={goal} days={30} />
+          <h2 style={{ marginBottom: '1rem' }}>{format(new Date(), 'MMMM yyyy')}</h2>
+          {loading ? (
+            <p style={{ color: 'var(--muted)' }}>Loading…</p>
+          ) : (
+            <CalendarView totals={totals} goal={goal} />
+          )}
         </div>
 
         {/* Today's entries */}
@@ -105,7 +125,6 @@ export default function DashboardPage() {
           <h2>Today</h2>
           <span style={{ color: 'var(--muted)', fontSize: '.82rem' }}>{todayEntries.length} entries</span>
         </div>
-        {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
         {!loading && todayEntries.length === 0 && (
           <p style={{ color: 'var(--muted)', fontSize: '.9rem' }}>Nothing logged yet today.</p>
         )}
@@ -126,18 +145,31 @@ export default function DashboardPage() {
   )
 }
 
-function computeStreak(totals, goal) {
-  if (!totals.length) return 0
-  const byDay = {}
-  totals.forEach(({ day, total_mg }) => { byDay[day] = total_mg })
-  let streak = 0
-  const today = new Date()
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
-    const key = format(d, 'yyyy-MM-dd')
-    if (byDay[key] !== undefined && byDay[key] <= goal) streak++
-    else if (i > 0) break
-  }
-  return streak
+function UserTotal({ name, total, goal, isMe }) {
+  const hasData = total !== null && total !== undefined
+  const pct = hasData ? Math.min(total / goal, 1) : 0
+  const color = !hasData ? 'var(--muted)'
+    : total === 0 ? 'var(--success)'
+    : pct <= 0.8 ? 'var(--success)'
+    : pct <= 1.0 ? '#fbbf24'
+    : 'var(--danger)'
+
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: '.35rem', fontWeight: 600 }}>
+        {name}
+      </div>
+      <div style={{ fontSize: '2rem', fontWeight: 900, color, lineHeight: 1 }}>
+        {hasData ? total.toFixed(1) : '—'}
+      </div>
+      <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: '.2rem' }}>
+        grams
+      </div>
+      {hasData && (
+        <div style={{ marginTop: '.5rem', height: 4, borderRadius: 99, background: 'var(--border)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct * 100}%`, background: color, borderRadius: 99, transition: 'width .5s ease' }} />
+        </div>
+      )}
+    </div>
+  )
 }
