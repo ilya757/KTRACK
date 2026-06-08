@@ -26,14 +26,21 @@ create policy "Users can insert own profile"
   on public.profiles for insert
   with check (auth.uid() = id);
 
+-- Helper to get partner_id without triggering RLS recursion
+create or replace function public.get_partner_id()
+returns uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select partner_id from public.profiles where id = auth.uid() limit 1;
+$$;
+
 -- Allow reading partner profile (for shared summary view)
 create policy "Users can view partner profile"
   on public.profiles for select
-  using (
-    id in (
-      select partner_id from public.profiles where id = auth.uid()
-    )
-  );
+  using (id = public.get_partner_id());
 
 -- Log entries
 create table public.log_entries (
@@ -68,11 +75,7 @@ create policy "Users can delete own entries"
 -- Allow partner to view entries for shared summary
 create policy "Partner can view entries"
   on public.log_entries for select
-  using (
-    user_id in (
-      select partner_id from public.profiles where id = auth.uid()
-    )
-  );
+  using (user_id = public.get_partner_id());
 
 -- Indexes
 create index log_entries_user_id_logged_at_idx
