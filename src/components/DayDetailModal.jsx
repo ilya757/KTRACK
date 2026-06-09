@@ -28,9 +28,10 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted }) {
   const total = entries.reduce((s, e) => s + e.amount_mg, 0)
 
   async function handleDelete(id) {
+    const entry = entries.find(e => e.id === id)
     await deleteEntry(id)
     setEntries(prev => prev.filter(e => e.id !== id))
-    if (onDeleted) onDeleted(id, date)
+    if (onDeleted) onDeleted(id, date, entry?.amount_mg ?? 0)
   }
 
   const label = format(new Date(date + 'T12:00:00'), 'EEEE, MMMM d')

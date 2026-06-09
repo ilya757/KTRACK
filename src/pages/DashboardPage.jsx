@@ -46,6 +46,23 @@ export default function DashboardPage() {
 
   function handleAdded(entry) {
     setTodayEntries(prev => [entry, ...prev])
+    // Update calendar totals in place so it reflects immediately
+    const day = format(new Date(entry.logged_at), 'yyyy-MM-dd')
+    setTotals(prev => {
+      const existing = prev.find(t => t.day === day)
+      if (existing) {
+        return prev.map(t => t.day === day ? { ...t, total_mg: +t.total_mg + entry.amount_mg } : t)
+      } else {
+        return [...prev, { day, total_mg: entry.amount_mg }]
+      }
+    })
+  }
+
+  function handleEntryDeleted(id, day, amount) {
+    removeEntry(id)
+    setTotals(prev => prev.map(t =>
+      t.day === day ? { ...t, total_mg: Math.max(0, +t.total_mg - amount) } : t
+    ))
   }
 
   function removeEntry(id) {
@@ -149,11 +166,7 @@ export default function DashboardPage() {
           date={selectedDay}
           userId={userId}
           onClose={() => setSelectedDay(null)}
-          onDeleted={(id, date) => {
-            // If deleted from today, update today's list too
-            const today = format(new Date(), 'yyyy-MM-dd')
-            if (date === today) removeEntry(id)
-          }}
+          onDeleted={handleEntryDeleted}
         />
       )}
     </>
