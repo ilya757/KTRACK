@@ -33,21 +33,33 @@ export default function DashboardPage() {
     if (partnerId) {
       fetches.push(getTodayEntries(partnerId))
       fetches.push(getProfile(partnerId))
+      fetches.push(getDailyTotals(partnerId, 31))
     }
-    Promise.all(fetches).then(([entries, tots, partnerEntries, pProfile]) => {
+    Promise.all(fetches).then(([entries, myTots, partnerEntries, pProfile, partnerTots]) => {
       setTodayEntries(entries)
-      setTotals(tots)
       if (partnerEntries) {
         setPartnerToday(partnerEntries.reduce((s, e) => s + e.amount_mg, 0))
       }
       if (pProfile) setPartnerProfile(pProfile)
+
+      // Merge my totals + partner totals into combined calendar
+      const merged = {}
+      myTots.forEach(({ day, total_mg }) => {
+        merged[day] = (merged[day] ?? 0) + +total_mg
+      })
+      if (partnerTots) {
+        partnerTots.forEach(({ day, total_mg }) => {
+          merged[day] = (merged[day] ?? 0) + +total_mg
+        })
+      }
+      setTotals(Object.entries(merged).map(([day, total_mg]) => ({ day, total_mg })))
     }).finally(() => setLoading(false))
   }, [userId, partnerId])
 
   function handleAdded(entry) {
     setTodayEntries(prev => [entry, ...prev])
     // Update calendar totals in place so it reflects immediately
-    const day = format(new Date(entry.logged_at), 'yyyy-MM-dd')
+    const day = format(new Date(), 'yyyy-MM-dd') // always local today
     setTotals(prev => {
       const existing = prev.find(t => t.day === day)
       if (existing) {

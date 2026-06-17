@@ -94,7 +94,7 @@ security definer
 set search_path = public
 as $$
   select
-    date_trunc('day', logged_at at time zone 'UTC')::date as day,
+    date_trunc('day', logged_at at time zone 'America/New_York')::date as day,
     sum(amount_mg) as total_mg
   from log_entries
   where user_id = target_user_id
