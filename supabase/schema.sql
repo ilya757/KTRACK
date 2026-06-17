@@ -96,7 +96,7 @@ as $$
   select
     date_trunc('day', logged_at at time zone 'America/New_York')::date as day,
     sum(amount_mg) as total_mg
-  from log_entries
+  from public.log_entries
   where user_id = target_user_id
     and logged_at >= now() - (days || ' days')::interval
   group by 1
