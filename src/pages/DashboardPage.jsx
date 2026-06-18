@@ -179,6 +179,18 @@ export default function DashboardPage() {
           userId={userId}
           onClose={() => setSelectedDay(null)}
           onDeleted={handleEntryDeleted}
+          onAdded={(entry, day) => {
+            const today = format(new Date(), 'yyyy-MM-dd')
+            if (day === today) handleAdded(entry)
+            else {
+              // Just update calendar totals for past days
+              setTotals(prev => {
+                const existing = prev.find(t => t.day === day)
+                if (existing) return prev.map(t => t.day === day ? { ...t, total_mg: +t.total_mg + entry.amount_mg } : t)
+                return [...prev, { day, total_mg: entry.amount_mg }]
+              })
+            }
+          }}
         />
       )}
     </>
@@ -200,7 +212,7 @@ function UserTotal({ name, total, goal, isMe }) {
         {name}
       </div>
       <div style={{ fontSize: '2rem', fontWeight: 900, color, lineHeight: 1 }}>
-        {hasData ? total.toFixed(1) : '—'}
+        {hasData ? total.toFixed(2) : '—'}
       </div>
       <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: '.2rem' }}>
         grams

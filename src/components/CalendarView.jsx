@@ -74,7 +74,7 @@ export default function CalendarView({ totals = [], goal = 2, onDayClick }) {
               </span>
               {!future && total !== undefined && (
                 <span style={{ fontSize: '.7rem', fontWeight: 700, color: text, lineHeight: 1 }}>
-                  {total === 0 ? '✓' : `${total.toFixed(1)}`}
+                  {total === 0 ? '✓' : `${total.toFixed(2)}`}
                 </span>
               )}
               {!future && total === undefined && (

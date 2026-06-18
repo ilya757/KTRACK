@@ -52,7 +52,7 @@ export default function LogPage() {
                 {format(new Date(day + 'T12:00:00'), 'EEEE, MMMM d')}
               </h3>
               <span style={{ color: 'var(--muted)', fontSize: '.82rem' }}>
-                {groups[day].reduce((s, e) => s + e.amount_mg, 0).toFixed(1)} mg
+                {groups[day].reduce((s, e) => s + e.amount_mg, 0).toFixed(2)} mg
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.55rem' }}>

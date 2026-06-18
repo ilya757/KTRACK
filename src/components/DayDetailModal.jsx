@@ -1,17 +1,26 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { format, parseISO } from 'date-fns'
-import { X, Trash2 } from 'lucide-react'
-import { deleteEntry } from '../lib/queries'
+import { X, Trash2, Plus } from 'lucide-react'
+import { deleteEntry, addEntry } from '../lib/queries'
 
-export default function DayDetailModal({ date, userId, onClose, onDeleted }) {
+const MIN = 0.1
+const MAX = 2.0
+const STEP = 0.1
+
+export default function DayDetailModal({ date, userId, onClose, onDeleted, onAdded }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showAdd, setShowAdd] = useState(false)
+  const [sliderVal, setSliderVal] = useState(1.0)
+  const [custom, setCustom] = useState('')
+  const [useCustom, setUseCustom] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const start = new Date(date + 'T00:00:00')
     const end   = new Date(date + 'T23:59:59')
-
     supabase
       .from('log_entries')
       .select('*')
@@ -19,13 +28,12 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted }) {
       .gte('logged_at', start.toISOString())
       .lte('logged_at', end.toISOString())
       .order('logged_at', { ascending: true })
-      .then(({ data }) => {
-        setEntries(data ?? [])
-        setLoading(false)
-      })
+      .then(({ data }) => { setEntries(data ?? []); setLoading(false) })
   }, [date, userId])
 
   const total = entries.reduce((s, e) => s + e.amount_mg, 0)
+  const label = format(new Date(date + 'T12:00:00'), 'EEEE, MMMM d')
+  const pct = ((sliderVal - MIN) / (MAX - MIN)) * 100
 
   async function handleDelete(id) {
     const entry = entries.find(e => e.id === id)
@@ -34,7 +42,27 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted }) {
     if (onDeleted) onDeleted(id, date, entry?.amount_mg ?? 0)
   }
 
-  const label = format(new Date(date + 'T12:00:00'), 'EEEE, MMMM d')
+  async function handleAdd() {
+    const amount = useCustom ? parseFloat(custom) : sliderVal
+    if (!amount || amount <= 0) { setError('Enter a valid amount'); return }
+    setError('')
+    setSaving(true)
+    try {
+      // Log at noon on the selected date so it always lands on the right day
+      const logged_at = new Date(date + 'T12:00:00').toISOString()
+      const entry = await addEntry({ amount_mg: amount, logged_at })
+      setEntries(prev => [...prev, entry])
+      if (onAdded) onAdded(entry, date)
+      setShowAdd(false)
+      setSliderVal(1.0)
+      setCustom('')
+      setUseCustom(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div
@@ -54,19 +82,19 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted }) {
           borderRadius: '24px 24px 0 0',
           padding: '1.5rem 1.5rem 2.5rem',
           border: '1px solid var(--border)',
-          maxHeight: '75dvh',
+          maxHeight: '85dvh',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: '.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '.2rem' }}>
               {label}
             </div>
             <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1 }}>
-              {total.toFixed(1)}
+              {total.toFixed(2)}
               <span style={{ fontSize: '.9rem', color: 'var(--muted)', fontWeight: 400, marginLeft: '.3rem' }}>g total</span>
             </div>
           </div>
@@ -78,7 +106,7 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted }) {
         {/* Entries list */}
         <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '.6rem', flexGrow: 1 }}>
           {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
-          {!loading && entries.length === 0 && (
+          {!loading && entries.length === 0 && !showAdd && (
             <p style={{ color: 'var(--muted)', fontSize: '.9rem' }}>No entries for this day.</p>
           )}
           {entries.map((entry, i) => (
@@ -100,7 +128,7 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted }) {
                 {i + 1}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '1rem' }}>{entry.amount_mg}g</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem' }}>{(+entry.amount_mg).toFixed(2)}g</div>
                 <div style={{ color: 'var(--muted)', fontSize: '.78rem', marginTop: '.1rem' }}>
                   {format(parseISO(entry.logged_at), 'h:mm a')}
                 </div>
@@ -113,7 +141,70 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted }) {
               </button>
             </div>
           ))}
+
+          {/* Inline add form */}
+          {showAdd && (
+            <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '1rem', border: '1px solid var(--primary)' }}>
+              <div style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: 900, marginBottom: '.75rem', lineHeight: 1 }}>
+                {useCustom ? (custom || '—') : sliderVal.toFixed(2)}
+                <span style={{ fontSize: '.9rem', color: 'var(--muted)', fontWeight: 400, marginLeft: '.3rem' }}>g</span>
+              </div>
+              <input
+                type="range" min={MIN} max={MAX} step={STEP}
+                value={sliderVal}
+                onChange={e => { setSliderVal(parseFloat(e.target.value)); setUseCustom(false); setCustom('') }}
+                style={{
+                  width: '100%', height: 6, appearance: 'none',
+                  background: `linear-gradient(to right, var(--primary) ${pct}%, var(--border) ${pct}%)`,
+                  borderRadius: 99, outline: 'none', cursor: 'pointer', marginBottom: '.5rem',
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.75rem' }}>
+                <span>0.1g</span><span>2.0g</span>
+              </div>
+              <input
+                type="number" inputMode="decimal" step="0.01" min="0.01"
+                placeholder="More than 2g? Type here"
+                value={custom}
+                onChange={e => { setCustom(e.target.value); setUseCustom(true) }}
+                style={{ marginBottom: '.75rem' }}
+              />
+              {error && <p className="error-msg" style={{ marginBottom: '.5rem' }}>{error}</p>}
+              <div style={{ display: 'flex', gap: '.5rem' }}>
+                <button
+                  onClick={() => { setShowAdd(false); setError('') }}
+                  style={{ flex: 1, padding: '.65rem', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 10, color: 'var(--muted)', fontWeight: 600 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={handleAdd}
+                  disabled={saving}
+                  style={{ flex: 2, padding: '.65rem', borderRadius: 10 }}
+                >
+                  {saving ? 'Saving…' : 'Log It'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Add button */}
+        {!showAdd && (
+          <button
+            onClick={() => setShowAdd(true)}
+            style={{
+              marginTop: '1rem', width: '100%', padding: '.85rem',
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              borderRadius: 14, fontWeight: 700, fontSize: '1rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem',
+              flexShrink: 0,
+            }}
+          >
+            <Plus size={18} /> Add to this day
+          </button>
+        )}
       </div>
     </div>
   )

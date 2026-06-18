@@ -45,7 +45,7 @@ export default function AddEntryForm({ onAdded }) {
       <h2>Add Entry</h2>
 
       <div style={{ textAlign: 'center', fontSize: '3.5rem', fontWeight: 900, lineHeight: 1 }}>
-        {useCustom ? (custom || '—') : sliderVal.toFixed(1)}
+        {useCustom ? (custom || '—') : sliderVal.toFixed(2)}
         <span style={{ fontSize: '1rem', color: 'var(--muted)', marginLeft: '.4rem' }}>g</span>
       </div>
 

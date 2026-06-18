@@ -80,7 +80,7 @@ export default function QuickAddModal({ onAdded, onClose }) {
         {/* Big amount display */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ fontSize: '5rem', fontWeight: 900, lineHeight: 1, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
-            {useCustom ? (custom || '—') : sliderVal.toFixed(1)}
+            {useCustom ? (custom || '—') : sliderVal.toFixed(2)}
           </div>
           <div style={{ color: 'var(--muted)', fontSize: '1rem', marginTop: '.4rem' }}>grams</div>
         </div>
