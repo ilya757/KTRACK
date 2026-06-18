@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getTodayEntries, getDailyTotals, getProfile } from '../lib/queries'
+import { supabase } from '../lib/supabase'
 import GoalRing from '../components/GoalRing'
 import CalendarView from '../components/CalendarView'
 import EntryCard from '../components/EntryCard'
@@ -23,6 +24,45 @@ export default function DashboardPage() {
   const goal = profile?.daily_goal_mg ?? 2
   const partnerId = profile?.partner_id
   const todayTotal = todayEntries.reduce((s, e) => s + e.amount_mg, 0)
+
+  // Realtime: listen for partner's new/deleted entries
+  useEffect(() => {
+    if (!partnerId) return
+
+    const channel = supabase
+      .channel(`partner-entries-${partnerId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'log_entries', filter: `user_id=eq.${partnerId}` },
+        (payload) => {
+          const entry = payload.new
+          const day = format(new Date(entry.logged_at), 'yyyy-MM-dd')
+          const today = format(new Date(), 'yyyy-MM-dd')
+          if (day === today) setPartnerToday(prev => (prev ?? 0) + entry.amount_mg)
+          setTotals(prev => {
+            const existing = prev.find(t => t.day === day)
+            if (existing) return prev.map(t => t.day === day ? { ...t, total_mg: +t.total_mg + entry.amount_mg } : t)
+            return [...prev, { day, total_mg: entry.amount_mg }]
+          })
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'log_entries', filter: `user_id=eq.${partnerId}` },
+        (payload) => {
+          const entry = payload.old
+          const day = format(new Date(entry.logged_at), 'yyyy-MM-dd')
+          const today = format(new Date(), 'yyyy-MM-dd')
+          if (day === today) setPartnerToday(prev => Math.max(0, (prev ?? 0) - entry.amount_mg))
+          setTotals(prev => prev.map(t =>
+            t.day === day ? { ...t, total_mg: Math.max(0, +t.total_mg - entry.amount_mg) } : t
+          ))
+        }
+      )
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [partnerId])
 
   useEffect(() => {
     if (!userId) return
