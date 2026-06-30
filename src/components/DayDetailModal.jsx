@@ -196,7 +196,7 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
                     type="time"
                     value={timeInput}
                     onChange={e => setTimeInput(e.target.value)}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
                   />
                 </div>
               )}
