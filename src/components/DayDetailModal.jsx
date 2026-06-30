@@ -20,10 +20,8 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
   const [timeInput, setTimeInput] = useState('12:00')
 
   const now = new Date()
-  const effectiveToday = new Date(now)
-  if (now.getHours() < 6) effectiveToday.setDate(effectiveToday.getDate() - 1)
-  const effectiveTodayStr = effectiveToday.toISOString().slice(0, 10)
-  const isPastDay = date !== effectiveTodayStr
+  const calendarToday = now.toISOString().slice(0, 10)
+  const isPastDay = date < calendarToday
 
   useEffect(() => {
     const start = new Date(date + 'T00:00:00')
@@ -58,7 +56,7 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
     try {
       const logged_at = isPastDay
         ? new Date(date + 'T' + timeInput + ':00').toISOString()
-        : now.toISOString()
+        : new Date().toISOString()
       const entry = await addEntry({ amount_mg: amount, logged_at })
       setEntries(prev => [...prev, entry])
       if (onAdded) onAdded(entry, date)
@@ -164,7 +162,7 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
 
           {/* Inline add form */}
           {showAdd && (
-            <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '1rem', border: '1px solid var(--primary)' }}>
+            <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '1rem', border: '1px solid var(--primary)', overflow: 'hidden' }}>
               <div style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: 900, marginBottom: '.75rem', lineHeight: 1 }}>
                 {useCustom ? (custom || '—') : sliderVal.toFixed(2)}
                 <span style={{ fontSize: '.9rem', color: 'var(--muted)', fontWeight: 400, marginLeft: '.3rem' }}>g</span>
