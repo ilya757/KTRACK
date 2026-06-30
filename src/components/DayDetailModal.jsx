@@ -119,7 +119,7 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
         </div>
 
         {/* Entries list */}
-        <div ref={listRef} style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '.6rem', flexGrow: 1 }}>
+        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '.6rem', flexGrow: 1 }}>
           {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
           {!loading && entries.length === 0 && !showAdd && (
             <p style={{ color: 'var(--muted)', fontSize: '.9rem' }}>No entries for this day.</p>
@@ -166,68 +166,65 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
               </div>
             )
           })}
-
-          {/* Inline add form */}
-          {showAdd && (
-            <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '1rem', border: '1px solid var(--primary)', overflow: 'hidden' }}>
-              <div style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: 900, marginBottom: '.75rem', lineHeight: 1 }}>
-                {useCustom ? (custom || '—') : sliderVal.toFixed(2)}
-                <span style={{ fontSize: '.9rem', color: 'var(--muted)', fontWeight: 400, marginLeft: '.3rem' }}>g</span>
-              </div>
-              <input
-                type="range" min={MIN} max={MAX} step={STEP}
-                value={sliderVal}
-                onChange={e => { setSliderVal(parseFloat(e.target.value)); setUseCustom(false); setCustom('') }}
-                style={{
-                  width: '100%', height: 6, appearance: 'none',
-                  background: `linear-gradient(to right, var(--primary) ${pct}%, var(--border) ${pct}%)`,
-                  borderRadius: 99, outline: 'none', cursor: 'pointer', marginBottom: '.5rem',
-                }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.75rem' }}>
-                <span>0.1g</span><span>2.0g</span>
-              </div>
-              <input
-                type="number" inputMode="decimal" step="0.01" min="0.01"
-                placeholder="More than 2g? Type here"
-                value={custom}
-                onChange={e => { setCustom(e.target.value); setUseCustom(true) }}
-                style={{ marginBottom: '.75rem' }}
-              />
-              {isPastDay && (
-                <div style={{ marginBottom: '.75rem' }}>
-                  <div style={{ fontSize: '.78rem', color: 'var(--muted)', marginBottom: '.3rem' }}>Time</div>
-                  <input
-                    type="time"
-                    value={timeInput}
-                    onChange={e => setTimeInput(e.target.value)}
-                    style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
-                  />
-                </div>
-              )}
-              {error && <p className="error-msg" style={{ marginBottom: '.5rem' }}>{error}</p>}
-              <div style={{ display: 'flex', gap: '.5rem' }}>
-                <button
-                  onClick={() => { setShowAdd(false); setError(''); setTimeInput('12:00') }}
-                  style={{ flex: 1, padding: '.65rem', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 10, color: 'var(--muted)', fontWeight: 600 }}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn-primary"
-                  onClick={handleAdd}
-                  disabled={saving}
-                  style={{ flex: 2, padding: '.65rem', borderRadius: 10 }}
-                >
-                  {saving ? 'Saving…' : 'Log It'}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Add button */}
-        {!showAdd && (
+        {/* Add form — pinned below entries, never scrolls away */}
+        {showAdd ? (
+          <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '1rem', border: '1px solid var(--primary)', overflow: 'hidden', flexShrink: 0, marginTop: '.6rem' }}>
+            <div style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: 900, marginBottom: '.75rem', lineHeight: 1 }}>
+              {useCustom ? (custom || '—') : sliderVal.toFixed(2)}
+              <span style={{ fontSize: '.9rem', color: 'var(--muted)', fontWeight: 400, marginLeft: '.3rem' }}>g</span>
+            </div>
+            <input
+              type="range" min={MIN} max={MAX} step={STEP}
+              value={sliderVal}
+              onChange={e => { setSliderVal(parseFloat(e.target.value)); setUseCustom(false); setCustom('') }}
+              style={{
+                width: '100%', height: 6, appearance: 'none',
+                background: `linear-gradient(to right, var(--primary) ${pct}%, var(--border) ${pct}%)`,
+                borderRadius: 99, outline: 'none', cursor: 'pointer', marginBottom: '.5rem',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.75rem' }}>
+              <span>0.1g</span><span>2.0g</span>
+            </div>
+            <input
+              type="number" inputMode="decimal" step="0.01" min="0.01"
+              placeholder="More than 2g? Type here"
+              value={custom}
+              onChange={e => { setCustom(e.target.value); setUseCustom(true) }}
+              style={{ marginBottom: '.75rem' }}
+            />
+            {isPastDay && (
+              <div style={{ marginBottom: '.75rem' }}>
+                <div style={{ fontSize: '.78rem', color: 'var(--muted)', marginBottom: '.3rem' }}>Time</div>
+                <input
+                  type="time"
+                  value={timeInput}
+                  onChange={e => setTimeInput(e.target.value)}
+                  style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
+                />
+              </div>
+            )}
+            {error && <p className="error-msg" style={{ marginBottom: '.5rem' }}>{error}</p>}
+            <div style={{ display: 'flex', gap: '.5rem' }}>
+              <button
+                onClick={() => { setShowAdd(false); setError(''); setTimeInput('12:00') }}
+                style={{ flex: 1, padding: '.65rem', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 10, color: 'var(--muted)', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleAdd}
+                disabled={saving}
+                style={{ flex: 2, padding: '.65rem', borderRadius: 10 }}
+              >
+                {saving ? 'Saving…' : 'Log It'}
+              </button>
+            </div>
+          </div>
+        ) : (
           <button
             onClick={() => setShowAdd(true)}
             style={{
