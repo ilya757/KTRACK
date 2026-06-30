@@ -1,4 +1,5 @@
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, isSameMonth } from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Color based on % of goal
 function getDayColor(total, goal) {
@@ -14,11 +15,14 @@ function getDayColor(total, goal) {
 
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
-export default function CalendarView({ totals = [], goal = 2, onDayClick }) {
+export default function CalendarView({ totals = [], goal = 2, onDayClick, viewMonth, onMonthChange }) {
   const now = new Date()
-  const monthStart = startOfMonth(now)
-  const monthEnd = endOfMonth(now)
+  const month = viewMonth ?? now
+  const monthStart = startOfMonth(month)
+  const monthEnd = endOfMonth(month)
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  const isCurrentMonth = isSameMonth(month, now)
+  const canGoBack = !isSameMonth(month, addMonths(now, -12))
 
   // Build lookup: 'yyyy-MM-dd' -> total
   const byDay = {}
@@ -30,6 +34,25 @@ export default function CalendarView({ totals = [], goal = 2, onDayClick }) {
 
   return (
     <div>
+      {/* Month navigation */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <button
+          onClick={() => onMonthChange?.(addMonths(month, -1))}
+          disabled={!canGoBack}
+          style={{ background: 'none', border: 'none', padding: '.3rem', color: canGoBack ? 'var(--text)' : 'var(--border)', cursor: canGoBack ? 'pointer' : 'default' }}
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <span style={{ fontWeight: 700, fontSize: '1rem' }}>{format(month, 'MMMM yyyy')}</span>
+        <button
+          onClick={() => onMonthChange?.(addMonths(month, 1))}
+          disabled={isCurrentMonth}
+          style={{ background: 'none', border: 'none', padding: '.3rem', color: isCurrentMonth ? 'var(--border)' : 'var(--text)', cursor: isCurrentMonth ? 'default' : 'pointer' }}
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+
       {/* Day headers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 4 }}>
         {DAYS.map(d => (
@@ -46,7 +69,7 @@ export default function CalendarView({ totals = [], goal = 2, onDayClick }) {
           const key = format(d, 'yyyy-MM-dd')
           const total = byDay[key]
           const { bg, text } = getDayColor(total, goal)
-          const future = d > now
+          const future = d > now && !isToday(d)
           const todayStyle = isToday(d) ? { outline: '2px solid var(--primary)', outlineOffset: -1 } : {}
 
           return (

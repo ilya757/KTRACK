@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [selectedDay, setSelectedDay] = useState(null)
+  const [viewMonth, setViewMonth] = useState(new Date())
 
   const userId = session?.user?.id
   const goal = profile?.daily_goal_mg ?? 2
@@ -68,12 +69,12 @@ export default function DashboardPage() {
     if (!userId) return
     const fetches = [
       getTodayEntries(userId),
-      getDailyTotals(userId, 31),
+      getDailyTotals(userId, 365),
     ]
     if (partnerId) {
       fetches.push(getTodayEntries(partnerId))
       fetches.push(getProfile(partnerId))
-      fetches.push(getDailyTotals(partnerId, 31))
+      fetches.push(getDailyTotals(partnerId, 365))
     }
     Promise.all(fetches).then(([entries, myTots, partnerEntries, pProfile, partnerTots]) => {
       setTodayEntries(entries)
@@ -183,11 +184,16 @@ export default function DashboardPage() {
 
         {/* Calendar */}
         <div className="card" style={{ marginBottom: '1rem' }}>
-          <h2 style={{ marginBottom: '1rem' }}>{format(new Date(), 'MMMM yyyy')}</h2>
           {loading ? (
             <p style={{ color: 'var(--muted)' }}>Loading…</p>
           ) : (
-            <CalendarView totals={totals} goal={goal} onDayClick={setSelectedDay} />
+            <CalendarView
+              totals={totals}
+              goal={goal}
+              onDayClick={setSelectedDay}
+              viewMonth={viewMonth}
+              onMonthChange={setViewMonth}
+            />
           )}
         </div>
 
