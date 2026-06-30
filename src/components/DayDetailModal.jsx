@@ -17,6 +17,13 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
   const [useCustom, setUseCustom] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [timeInput, setTimeInput] = useState('12:00')
+
+  const now = new Date()
+  const effectiveToday = new Date(now)
+  if (now.getHours() < 6) effectiveToday.setDate(effectiveToday.getDate() - 1)
+  const effectiveTodayStr = effectiveToday.toISOString().slice(0, 10)
+  const isPastDay = date !== effectiveTodayStr
 
   useEffect(() => {
     const start = new Date(date + 'T00:00:00')
@@ -49,13 +56,9 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
     setError('')
     setSaving(true)
     try {
-      const now = new Date()
-      const effectiveToday = new Date(now)
-      if (now.getHours() < 6) effectiveToday.setDate(effectiveToday.getDate() - 1)
-      const effectiveTodayStr = effectiveToday.toISOString().slice(0, 10)
-      const logged_at = date === effectiveTodayStr
-        ? now.toISOString()
-        : new Date(date + 'T12:00:00').toISOString()
+      const logged_at = isPastDay
+        ? new Date(date + 'T' + timeInput + ':00').toISOString()
+        : now.toISOString()
       const entry = await addEntry({ amount_mg: amount, logged_at })
       setEntries(prev => [...prev, entry])
       if (onAdded) onAdded(entry, date)
@@ -63,6 +66,7 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
       setSliderVal(1.0)
       setCustom('')
       setUseCustom(false)
+      setTimeInput('12:00')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -185,10 +189,21 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
                 onChange={e => { setCustom(e.target.value); setUseCustom(true) }}
                 style={{ marginBottom: '.75rem' }}
               />
+              {isPastDay && (
+                <div style={{ marginBottom: '.75rem' }}>
+                  <div style={{ fontSize: '.78rem', color: 'var(--muted)', marginBottom: '.3rem' }}>Time</div>
+                  <input
+                    type="time"
+                    value={timeInput}
+                    onChange={e => setTimeInput(e.target.value)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              )}
               {error && <p className="error-msg" style={{ marginBottom: '.5rem' }}>{error}</p>}
               <div style={{ display: 'flex', gap: '.5rem' }}>
                 <button
-                  onClick={() => { setShowAdd(false); setError('') }}
+                  onClick={() => { setShowAdd(false); setError(''); setTimeInput('12:00') }}
                   style={{ flex: 1, padding: '.65rem', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: 10, color: 'var(--muted)', fontWeight: 600 }}
                 >
                   Cancel
