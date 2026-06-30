@@ -217,6 +217,8 @@ export default function DashboardPage() {
         <DayDetailModal
           date={selectedDay}
           userId={userId}
+          partnerId={partnerId}
+          partnerName={partnerProfile?.display_name ?? 'Partner'}
           onClose={() => setSelectedDay(null)}
           onDeleted={handleEntryDeleted}
           onAdded={(entry, day) => {

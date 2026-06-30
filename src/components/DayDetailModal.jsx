@@ -8,7 +8,7 @@ const MIN = 0.1
 const MAX = 2.0
 const STEP = 0.1
 
-export default function DayDetailModal({ date, userId, onClose, onDeleted, onAdded }) {
+export default function DayDetailModal({ date, userId, partnerId, partnerName, onClose, onDeleted, onAdded }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -21,15 +21,16 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted, onAdd
   useEffect(() => {
     const start = new Date(date + 'T00:00:00')
     const end   = new Date(date + 'T23:59:59')
+    const userIds = [userId, partnerId].filter(Boolean)
     supabase
       .from('log_entries')
       .select('*')
-      .eq('user_id', userId)
+      .in('user_id', userIds)
       .gte('logged_at', start.toISOString())
       .lte('logged_at', end.toISOString())
       .order('logged_at', { ascending: true })
       .then(({ data }) => { setEntries(data ?? []); setLoading(false) })
-  }, [date, userId])
+  }, [date, userId, partnerId])
 
   const total = entries.reduce((s, e) => s + e.amount_mg, 0)
   const label = format(new Date(date + 'T12:00:00'), 'EEEE, MMMM d')
@@ -109,38 +110,48 @@ export default function DayDetailModal({ date, userId, onClose, onDeleted, onAdd
           {!loading && entries.length === 0 && !showAdd && (
             <p style={{ color: 'var(--muted)', fontSize: '.9rem' }}>No entries for this day.</p>
           )}
-          {entries.map((entry, i) => (
-            <div
-              key={entry.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '1rem',
-                background: 'var(--bg)', borderRadius: 12,
-                padding: '.75rem 1rem',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%',
-                background: 'rgba(99,102,241,.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '.75rem', fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
-              }}>
-                {i + 1}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '1rem' }}>{(+entry.amount_mg).toFixed(2)}g</div>
-                <div style={{ color: 'var(--muted)', fontSize: '.78rem', marginTop: '.1rem' }}>
-                  {format(parseISO(entry.logged_at), 'h:mm a')}
-                </div>
-              </div>
-              <button
-                onClick={() => handleDelete(entry.id)}
-                style={{ background: 'none', border: 'none', padding: '.3rem', color: 'var(--danger)', cursor: 'pointer', flexShrink: 0 }}
+          {entries.map((entry, i) => {
+            const isMe = entry.user_id === userId
+            return (
+              <div
+                key={entry.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  background: 'var(--bg)', borderRadius: 12,
+                  padding: '.75rem 1rem',
+                  border: `1px solid ${isMe ? 'var(--border)' : 'rgba(99,102,241,.25)'}`,
+                }}
               >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: isMe ? 'rgba(99,102,241,.15)' : 'rgba(251,191,36,.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '.75rem', fontWeight: 700,
+                  color: isMe ? 'var(--accent)' : '#fbbf24',
+                  flexShrink: 0,
+                }}>
+                  {i + 1}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '1rem' }}>{(+entry.amount_mg).toFixed(2)}g</div>
+                  <div style={{ color: 'var(--muted)', fontSize: '.78rem', marginTop: '.1rem' }}>
+                    {format(parseISO(entry.logged_at), 'h:mm a')}
+                    {partnerId && (
+                      <span style={{ marginLeft: '.4rem', opacity: .7 }}>· {isMe ? 'You' : partnerName}</span>
+                    )}
+                  </div>
+                </div>
+                {isMe && (
+                  <button
+                    onClick={() => handleDelete(entry.id)}
+                    style={{ background: 'none', border: 'none', padding: '.3rem', color: 'var(--danger)', cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            )
+          })}
 
           {/* Inline add form */}
           {showAdd && (
