@@ -33,9 +33,11 @@ export default function QuickAddModal({ onAdded, onClose }) {
     setError('')
     setLoading(true)
     try {
+      const now = new Date()
+      if (now.getHours() < 6) now.setDate(now.getDate() - 1)
       const entry = await addEntry({
         amount_mg: amount,
-        logged_at: new Date().toISOString(),
+        logged_at: now.toISOString(),
       })
       onAdded(entry)
       onClose()
