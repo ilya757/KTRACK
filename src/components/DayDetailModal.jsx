@@ -49,15 +49,13 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
     setError('')
     setSaving(true)
     try {
-      const today = new Date().toISOString().slice(0, 10)
-      let logged_at
-      if (date === today) {
-        const now = new Date()
-        if (now.getHours() < 6) now.setDate(now.getDate() - 1)
-        logged_at = now.toISOString()
-      } else {
-        logged_at = new Date(date + 'T12:00:00').toISOString()
-      }
+      const now = new Date()
+      const effectiveToday = new Date(now)
+      if (now.getHours() < 6) effectiveToday.setDate(effectiveToday.getDate() - 1)
+      const effectiveTodayStr = effectiveToday.toISOString().slice(0, 10)
+      const logged_at = date === effectiveTodayStr
+        ? now.toISOString()
+        : new Date(date + 'T12:00:00').toISOString()
       const entry = await addEntry({ amount_mg: amount, logged_at })
       setEntries(prev => [...prev, entry])
       if (onAdded) onAdded(entry, date)
