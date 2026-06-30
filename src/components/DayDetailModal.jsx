@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { format, parseISO } from 'date-fns'
 import { X, Trash2, Plus } from 'lucide-react'
@@ -18,6 +18,13 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [timeInput, setTimeInput] = useState('12:00')
+  const listRef = useRef(null)
+
+  useEffect(() => {
+    if (showAdd && listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight
+    }
+  }, [showAdd])
 
   const now = new Date()
   const calendarToday = now.toISOString().slice(0, 10)
@@ -112,7 +119,7 @@ export default function DayDetailModal({ date, userId, partnerId, partnerName, o
         </div>
 
         {/* Entries list */}
-        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '.6rem', flexGrow: 1 }}>
+        <div ref={listRef} style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '.6rem', flexGrow: 1 }}>
           {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
           {!loading && entries.length === 0 && !showAdd && (
             <p style={{ color: 'var(--muted)', fontSize: '.9rem' }}>No entries for this day.</p>
